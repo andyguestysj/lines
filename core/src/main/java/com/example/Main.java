@@ -102,6 +102,7 @@ public class Main {
 	public FloatBuffer cubeCoordBuffer ;
 	public FloatBuffer cubeFaceColorBuffer ;
 	public FloatBuffer lineCoordBuffer ;
+	public FloatBuffer lineShadeBuffer ;
 	public int linePointCount;
 
 	public float rotateX;
@@ -236,8 +237,8 @@ public class Main {
 		private void makeLine(){
 			Vector3f start = new Vector3f(-75f, -75f,0);
 			Vector3f end = new Vector3f(75f, 75f,0);
-			//makeLineNaive(start, end);
-			makeLineNaiveFaster(start, end);
+			makeLineNaive(start, end);
+			//makeLineNaiveFaster(start, end);
 		}
 
 		private void makeLineNaive(Vector3f point1, Vector3f point2 ){
@@ -249,6 +250,7 @@ public class Main {
 			linePointCount = (int)(point2.x - point1.x);
 
 			float[] linePoints = new float[(linePointCount)*3];
+			float[] lineShades = new float[(linePointCount)*3];
 
 						int pos = 0;
 			float y;
@@ -258,6 +260,10 @@ public class Main {
 				linePoints[pos] = (float)x+point1.x;
 				linePoints[pos+1] = y;
 				linePoints[pos+2] = 0;
+				lineShades[pos]=1f;
+				lineShades[pos+1]=1f;
+				lineShades[pos+2]=0f;
+
 				pos += 3;
 				
 			}
@@ -267,6 +273,8 @@ public class Main {
 			 try (MemoryStack stack = MemoryStack.stackPush()){
 				lineCoordBuffer = stack.callocFloat(linePoints.length);
 				lineCoordBuffer.put(0,linePoints); 
+				lineShadeBuffer = stack.callocFloat(lineShades.length);
+				lineShadeBuffer.put(0,lineShades); 
 				}
  
 		 }
@@ -280,6 +288,7 @@ public class Main {
 			linePointCount = (int)(point2.x - point1.x);
 
 			float[] linePoints = new float[(linePointCount)*3];
+			float[] lineShades = new float[(linePointCount)*3];
 
 			System.out.println(linePointCount);
 
@@ -291,13 +300,19 @@ public class Main {
 				linePoints[pos] = (float)x;
 				linePoints[pos+1] = y;
 				linePoints[pos+2] = 0;
+				lineShades[pos]=1f;
+				lineShades[pos+1]=1f;
+				lineShades[pos+2]=0f;
 				pos += 3;
 				
 			}	 
-	
+			System.out.println("before try " + linePoints.length);
 			 try (MemoryStack stack = MemoryStack.stackPush()){
 				lineCoordBuffer = stack.callocFloat(linePoints.length);
+				System.out.println(linePoints.length);
 				lineCoordBuffer.put(0,linePoints); 
+				lineShadeBuffer = stack.callocFloat(lineShades.length);
+				lineShadeBuffer.put(0,lineShades); 
 				}
  
 		 }
@@ -492,18 +507,18 @@ public class Main {
 
 		//glTranslatef(-camPos[0],-camPos[2],-camPos[1]);
 
-		glColor3f(1f,1f,1f);
+		//glColor3f(1f,1f,1f);
 		glPointSize(5f);
 
 		glVertexPointer( 3, GL_FLOAT, 0, lineCoordBuffer  );  // Set data type and location, second cube.
-		//glColorPointer( 3, GL_FLOAT, 0, cubeFaceColorBuffer  );
+		glColorPointer( 3, GL_FLOAT, 0, lineShadeBuffer  );
 		
 		glEnableClientState( GL_VERTEX_ARRAY );
-		//glEnableClientState( GL_COLOR_ARRAY );
+		glEnableClientState( GL_COLOR_ARRAY );
 
 		
 		
- 		glDrawArrays( GL_POINTS, 0, (3*linePointCount) ); // Draw the line
+ 		glDrawArrays( GL_POINTS, 0, (linePointCount) ); // Draw the line
 
 	}
 
