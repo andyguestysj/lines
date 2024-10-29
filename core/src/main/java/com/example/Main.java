@@ -236,7 +236,8 @@ public class Main {
 		private void makeLine(){
 			Vector3f start = new Vector3f(-75f, -75f,0);
 			Vector3f end = new Vector3f(75f, 75f,0);
-			makeLineNaive(start, end);
+			//makeLineNaive(start, end);
+			makeLineNaiveFaster(start, end);
 		}
 
 		private void makeLineNaive(Vector3f point1, Vector3f point2 ){
@@ -245,13 +246,11 @@ public class Main {
 			float dx = (point2.x-point1.x);
 			float m = dy/dx;
 
-			linePointCount = (int)(point2.x - point1.x)+1;
+			linePointCount = (int)(point2.x - point1.x);
 
 			float[] linePoints = new float[(linePointCount)*3];
 
-			
-
-			int pos = 0;
+						int pos = 0;
 			float y;
 
 			for (int x = 0;x<linePointCount;x++){
@@ -265,6 +264,37 @@ public class Main {
 	 
 			
 
+			 try (MemoryStack stack = MemoryStack.stackPush()){
+				lineCoordBuffer = stack.callocFloat(linePoints.length);
+				lineCoordBuffer.put(0,linePoints); 
+				}
+ 
+		 }
+
+		 private void makeLineNaiveFaster(Vector3f point1, Vector3f point2 ){
+					
+			float dy = (point2.y-point1.y);
+			float dx = (point2.x-point1.x);
+			float m = dy/dx;
+
+			linePointCount = (int)(point2.x - point1.x);
+
+			float[] linePoints = new float[(linePointCount)*3];
+
+			System.out.println(linePointCount);
+
+			int pos = 0;
+			float y = point1.y-m;
+
+			for (int x = (int)point1.x;x<point2.x;x++){
+				y += m;
+				linePoints[pos] = (float)x;
+				linePoints[pos+1] = y;
+				linePoints[pos+2] = 0;
+				pos += 3;
+				
+			}	 
+	
 			 try (MemoryStack stack = MemoryStack.stackPush()){
 				lineCoordBuffer = stack.callocFloat(linePoints.length);
 				lineCoordBuffer.put(0,linePoints); 
