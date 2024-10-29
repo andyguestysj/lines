@@ -24,6 +24,7 @@ import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
 import static org.lwjgl.opengl.GL11.GL_MODELVIEW;
+import static org.lwjgl.opengl.GL11.GL_POINTS;
 import static org.lwjgl.opengl.GL11.GL_PROJECTION;
 import static org.lwjgl.opengl.GL11.GL_QUADS;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
@@ -31,6 +32,7 @@ import static org.lwjgl.opengl.GL11.GL_UNSIGNED_INT;
 import static org.lwjgl.opengl.GL11.GL_VERTEX_ARRAY;
 import static org.lwjgl.opengl.GL11.glClear;
 import static org.lwjgl.opengl.GL11.glClearColor;
+import static org.lwjgl.opengl.GL11.glColor3f;
 import static org.lwjgl.opengl.GL11.glColorPointer;
 import static org.lwjgl.opengl.GL11.glDrawArrays;
 import static org.lwjgl.opengl.GL11.glDrawElements;
@@ -41,6 +43,7 @@ import static org.lwjgl.opengl.GL11.glMatrixMode;
 import static org.lwjgl.opengl.GL11.glOrtho;
 import static org.lwjgl.opengl.GL11.glRotated;
 import static org.lwjgl.opengl.GL11.glTranslated;
+import static org.lwjgl.opengl.GL11.glTranslatef;
 import static org.lwjgl.opengl.GL11.glVertexPointer;
 import static org.lwjgl.opengl.GL11.glViewport;
 import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
@@ -77,7 +80,11 @@ import java.nio.IntBuffer;
 
 public class Main {
 
+	public float WIDTH = 1000f;
+	public float HEIGHT = 1000f;
+
 	public boolean VAO;
+	public boolean LINES;
 	// The window handle
 	private long window;
 
@@ -94,6 +101,8 @@ public class Main {
 
 	public FloatBuffer cubeCoordBuffer ;
 	public FloatBuffer cubeFaceColorBuffer ;
+	public FloatBuffer lineCoordBuffer ;
+	public int linePointCount;
 
 	public float rotateX;
 	public float rotateY;
@@ -115,6 +124,7 @@ public class Main {
 	public void run() {
 		count=0;
 		VAO = false;
+		LINES = true;
 		System.out.println("Hello LWJGL " + Version.getVersion() + "!");
 
 		init();
@@ -124,7 +134,10 @@ public class Main {
 		if (VAO)
 			makeShapes();
 		else
-			makeShapes2();
+			if (LINES)
+				makeLine();
+			else
+				makeShapes2();
 
 		loop();
 		cleanup();
@@ -219,6 +232,45 @@ public class Main {
 			 }
 
 		}
+
+		private void makeLine(){
+			Vector3f start = new Vector3f(-75f, -75f,0);
+			Vector3f end = new Vector3f(75f, 75f,0);
+			makeLineNaive(start, end);
+		}
+
+		private void makeLineNaive(Vector3f point1, Vector3f point2 ){
+					
+			float dy = (point2.y-point1.y);
+			float dx = (point2.x-point1.x);
+			float m = dy/dx;
+
+			linePointCount = (int)(point2.x - point1.x)+1;
+
+			float[] linePoints = new float[(linePointCount)*3];
+
+			
+
+			int pos = 0;
+			float y;
+
+			for (int x = 0;x<linePointCount;x++){
+				y = m *  ((float)x) + point1.y;
+				linePoints[pos] = (float)x+point1.x;
+				linePoints[pos+1] = y;
+				linePoints[pos+2] = 0;
+				pos += 3;
+				
+			}
+	 
+			
+
+			 try (MemoryStack stack = MemoryStack.stackPush()){
+				lineCoordBuffer = stack.callocFloat(linePoints.length);
+				lineCoordBuffer.put(0,linePoints); 
+				}
+ 
+		 }
 
 	private void makeShapes(){
 
@@ -318,7 +370,7 @@ public class Main {
 }
 
 	private void makeCamera(){
-		camPos = new float[] {0f,0f,0f};
+		camPos = new float[] {0f,0f,-100f};
 		
 
 
@@ -339,7 +391,7 @@ public class Main {
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // the window will be resizable
 
 		// Create the window
-		window = glfwCreateWindow(1000, 800, "Hello World!", NULL, NULL);
+		window = glfwCreateWindow((int)WIDTH, (int)HEIGHT, "Hello World!", NULL, NULL);
 		if ( window == NULL )
 			throw new RuntimeException("Failed to create the GLFW window");
 
@@ -385,12 +437,43 @@ public class Main {
 		GL.createCapabilities();
 
 		glMatrixMode(GL_PROJECTION);
-		glOrtho(-4, 4, -2, 2, -2, 2);  // simple orthographic projection
+		glLoadIdentity();
+		if (LINES)
+		{
+			glOrtho(-100,100,-100,100,-1f,1f);			
+		}
+		else
+			glOrtho(-8, 8, -8, 8, -6, 6);  // simple orthographic projection
+		
 		
 		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
 		glClearColor( 0.5F, 0.5F, 0.5F, 1 );
 		glEnable(GL_DEPTH_TEST);
 
+
+	}
+
+	public void DrawLine() {
+		glClearColor( 0F, 0F, 0F, 1 );
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
+
+		glLoadIdentity();
+
+		//glTranslatef(-camPos[0],-camPos[2],-camPos[1]);
+
+		glColor3f(1f,1f,1f);
+		glPointSize(5f);
+
+		glVertexPointer( 3, GL_FLOAT, 0, lineCoordBuffer  );  // Set data type and location, second cube.
+		//glColorPointer( 3, GL_FLOAT, 0, cubeFaceColorBuffer  );
+		
+		glEnableClientState( GL_VERTEX_ARRAY );
+		//glEnableClientState( GL_COLOR_ARRAY );
+
+		
+		
+ 		glDrawArrays( GL_POINTS, 0, (3*linePointCount) ); // Draw the line
 
 	}
 
@@ -401,6 +484,10 @@ public class Main {
 		
 
 		glLoadIdentity();
+		
+		glTranslatef(-camPos[0],-camPos[2],-camPos[1]);
+
+		
 		glTranslated(-2, 0, 0);     // Move cube to left half of window.
         
 		glRotated(rotateZ,0,0,1);     // Apply rotations.
@@ -414,8 +501,8 @@ public class Main {
 		glEnableClientState( GL_VERTEX_ARRAY );
 		glEnableClientState( GL_COLOR_ARRAY );
 
-		glTranslatef(-camPos[0],-camPos[1],-camPos[2]);
-
+		
+		
  		glDrawArrays( GL_QUADS, 0, 24 ); // Draw the first cube!
 
 	}
@@ -423,7 +510,7 @@ public class Main {
 public void DrawStuff() {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the framebuffer
- 		glViewport(0, 0, 1000,800);
+ 		glViewport(0, 0, 1000,1000);
 		
 
 		glUseProgram(programID);
@@ -464,10 +551,10 @@ public void DrawStuff() {
 			camPos[0] += 0.1f;
 		}
 		if (KEY_DOWN_DOWN){
-			camPos[1] -= 0.1f;
+			camPos[2] -= 0.1f;
 		}
 		if (KEY_UP_DOWN){
-			camPos[1] += 0.1f;
+			camPos[2] += 0.1f;
 		}
 	}
 	
@@ -487,14 +574,17 @@ public void DrawStuff() {
 		// the window or has pressed the ESCAPE key.
 		while ( !glfwWindowShouldClose(window) ) {
 			
-			//glViewport(0, 0, 1000,800);
+			glViewport(0, 0, 1000,1000);
 
 			do_key_stuff();
 
 			if (VAO)
 				DrawStuff();
 			else
-				DrawStuff2();
+				if (LINES)
+					DrawLine();
+				else
+					DrawStuff2();
 
 			glfwSwapBuffers(window); // swap the color buffers
 
